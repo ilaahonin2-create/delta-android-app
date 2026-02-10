@@ -13,10 +13,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     
@@ -47,11 +47,13 @@ jobs:
         pip3 install buildozer cython==0.29.33
     
     - name: Build APK with Buildozer
+      working-directory: android_app
       run: |
         buildozer android debug
     
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: delta-app-debug
-        path: bin/*.apk
+        path: android_app/bin/*.apk
+        if-no-files-found: error
