@@ -42,7 +42,7 @@ orientation = portrait
 fullscreen = 0
 
 # (list) Permissions
-android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,RECEIVE_BOOT_COMPLETED,FOREGROUND_SERVICE,WAKE_LOCK,REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
 
 # (int) Target Android API, should be as high as possible.
 android.api = 31
@@ -58,6 +58,9 @@ android.ndk = 23b
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
+
+# (list) Android services to create
+services = ClusterService:cluster_background_service.py:foreground
 
 # (str) Android NDK directory (if empty, it will be automatically downloaded.)
 android.ndk_path =
