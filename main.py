@@ -639,25 +639,109 @@ class DeltaApp(App):
         Clock.schedule_once(add_response, 0.8)
     
     def connect_to_cluster(self):
-        """Подключиться к кластеру"""
+        """Подключиться к кластеру и запустить фоновый сервис"""
         try:
             import requests
+            
+            # Генерируем уникальный ID устройства
+            device_id = self.get_or_create_device_id()
+            device_name = self.get_device_name()
+            
             # Пытаемся подключиться к серверу кластера
             cluster_url = "http://192.168.0.106:5555/api/register"
             device_info = {
+                'device_id': device_id,
                 'device_type': 'mobile',
-                'device_name': 'Android Phone',
-                'capabilities': ['chat', 'ai_dialogue']
+                'device_name': device_name,
+                'capabilities': ['chat', 'ai_dialogue', 'traffic_sharing', 'background_service']
             }
+            
             response = requests.post(cluster_url, json=device_info, timeout=3)
+            
             if response.status_code == 200:
                 print("✅ Подключено к кластеру!")
                 self.cluster_connected = True
+                
+                # Запускаем фоновый сервис
+                self.start_background_service()
+                
                 return True
+                
         except Exception as e:
             print(f"⚠️ Кластер недоступен: {e}")
             self.cluster_connected = False
+            
+            # Всё равно запускаем фоновый сервис
+            self.start_background_service()
+            
         return False
+    
+    def get_or_create_device_id(self):
+        """Получить или создать уникальный ID устройства"""
+        try:
+            from kivy.storage.jsonstore import JsonStore
+            store = JsonStore('device_config.json')
+            
+            if store.exists('device'):
+                return store.get('device')['id']
+            else:
+                import hashlib
+                import uuid
+                device_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:16]
+                store.put('device', id=device_id, created_at=time.time())
+                return device_id
+        except:
+            import uuid
+            return str(uuid.uuid4())[:16]
+    
+    def get_device_name(self):
+        """Получить имя устройства"""
+        try:
+            from jnius import autoclass
+            Build = autoclass('android.os.Build')
+            return f"{Build.MANUFACTURER} {Build.MODEL}"
+        except:
+            return "Android Device"
+    
+    def start_background_service(self):
+        """Запустить фоновый сервис кластера"""
+        try:
+            from jnius import autoclass
+            from android import mActivity
+            
+            context = mActivity
+            Intent = autoclass('android.content.Intent')
+            PythonService = autoclass('org.kivy.android.PythonService')
+            
+            # Создаём Intent для сервиса
+            service_intent = Intent(context, PythonService)
+            service_intent.putExtra('serviceEntrypoint', 'cluster_background_service.py')
+            service_intent.putExtra('serviceTitle', 'Дельта Кластер 💜')
+            service_intent.putExtra('serviceDescription', 'Делюсь ресурсами с кластером')
+            
+            # Запускаем сервис
+            context.startService(service_intent)
+            
+            print("✅ Фоновый сервис запущен!")
+            print("💡 Сервис будет работать даже после закрытия приложения")
+            
+            # Регистрируем автозапуск при загрузке
+            self.register_autostart()
+            
+            return True
+            
+        except Exception as e:
+            print(f"⚠️ Не удалось запустить сервис: {e}")
+            return False
+    
+    def register_autostart(self):
+        """Зарегистрировать автозапуск при загрузке Android"""
+        try:
+            from service_autostart import register_boot_receiver
+            register_boot_receiver()
+            print("✅ Автозапуск зарегистрирован")
+        except Exception as e:
+            print(f"⚠️ Не удалось зарегистрировать автозапуск: {e}")
     
     def get_delta_response(self, message):
         """Генерировать ответ Дельты с AI (полноценный диалог)"""
